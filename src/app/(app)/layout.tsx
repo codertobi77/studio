@@ -45,6 +45,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useIsMobile } from "@/hooks/use-mobile"; // Import useIsMobile
+import { ThemeToggle } from "@/components/theme-toggle"; // Import ThemeToggle
 
 // Function to get cookie value by name
 const getCookie = (name: string): string | undefined => {
@@ -259,12 +260,17 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
            {/* Optional: Desktop Sidebar Trigger - shown only > sm */}
            {/* <SidebarTrigger className="hidden sm:flex"/> */}
 
-           {/* Optional: Header actions (e.g., notifications, search) */}
+           {/* Header actions: Theme Toggle */}
+            <div className="flex items-center gap-2">
+               <ThemeToggle />
+            </div>
         </header>
 
         {/* Page Content */}
         <main className="flex-1 overflow-y-auto p-4 md:p-6">
-            {children}
+             <div className="animate-in fade-in duration-500"> {/* Simple fade-in animation */}
+                {children}
+            </div>
         </main>
          {/* Optional Footer for main content area */}
          {/* <footer className="border-t p-4 text-center text-sm text-muted-foreground">Footer</footer> */}

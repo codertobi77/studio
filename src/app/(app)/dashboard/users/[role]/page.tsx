@@ -117,7 +117,7 @@ export default function UsersPage() {
   // Render error message clearly if the role is invalid (checked after initial load/validation)
   if (!isLoading && !role) {
      return (
-        <div className="container mx-auto py-10 px-4 md:px-6">
+        <div className="container mx-auto py-10 px-4 md:px-6 animate-in fade-in duration-300">
              <Alert variant="destructive" className="max-w-2xl mx-auto">
                <AlertTriangle className="h-4 w-4" /> {/* More appropriate icon */}
                <AlertTitle>Invalid Role Specified</AlertTitle>
@@ -134,7 +134,7 @@ export default function UsersPage() {
    const validRole = role as Role; // Type assertion is safe
 
   return (
-    <div className="container mx-auto py-6 px-4 md:px-6"> {/* Consistent padding */}
+    <div className="container mx-auto py-6 px-4 md:px-6 animate-in fade-in duration-300"> {/* Consistent padding + Animation */}
       <UserTable
         users={users}
         role={validRole}

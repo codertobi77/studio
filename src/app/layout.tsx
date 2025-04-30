@@ -1,9 +1,7 @@
 import type { Metadata } from 'next';
-// Removed GeistSans and GeistMono imports as they were causing errors and not explicitly used in className
-// import { GeistSans } from 'geist/font/sans';
-// import { GeistMono } from 'geist/font/mono';
 import './globals.css';
 import { Toaster } from '@/components/ui/toaster';
+import { ThemeProvider } from "@/components/theme-provider";
 
 export const metadata: Metadata = {
   title: 'Marketplace Admin Hub',
@@ -16,14 +14,19 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en">
-      {/* Apply basic font-sans class, relying on globals.css for specific font variables */}
+    <html lang="en" suppressHydrationWarning>
       <body
-        // className={`${GeistSans.variable} ${GeistMono.variable} font-sans antialiased`} // Removed font variables
-        className={`font-sans antialiased`} // Simplified className
+        className={`font-sans antialiased`}
       >
-        {children}
-        <Toaster />
+        <ThemeProvider
+            attribute="class"
+            defaultTheme="system"
+            enableSystem
+            disableTransitionOnChange
+          >
+          {children}
+          <Toaster />
+        </ThemeProvider>
       </body>
     </html>
   );

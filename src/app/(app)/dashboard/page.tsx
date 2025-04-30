@@ -3,22 +3,24 @@ import { ShoppingCart, Building, UserCog, ShieldCheck } from "lucide-react";
 import Link from "next/link";
 
 export default function DashboardPage() {
+  const cardAnimation = "animate-in fade-in slide-in-from-bottom-4 duration-500 ease-out";
+
   return (
     <div className="space-y-8"> {/* Consistent outer spacing */}
-      <div className="space-y-2">
+      <div className="space-y-2 animate-in fade-in duration-300">
         <h1 className="text-3xl font-bold tracking-tight text-primary">Dashboard</h1>
         <p className="text-muted-foreground">Welcome to the Marketplace Admin Hub. Manage users by role below.</p>
       </div>
 
       <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
         {/* Buyer Card */}
-        <Link href="/dashboard/users/acheteurs" className="focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 rounded-lg">
-          <Card className="hover:shadow-lg transition-shadow duration-200 cursor-pointer border border-border bg-card text-card-foreground rounded-lg overflow-hidden group">
+        <Link href="/dashboard/users/acheteurs" className={`block focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 rounded-lg ${cardAnimation} delay-100 fill-mode-backwards`}>
+          <Card className="hover:shadow-lg transition-shadow duration-200 cursor-pointer border border-border bg-card text-card-foreground rounded-lg overflow-hidden group h-full flex flex-col"> {/* Ensure full height */}
             <CardHeader className="flex flex-row items-center justify-between space-y-0 p-4 bg-secondary/30 group-hover:bg-secondary/50 transition-colors">
               <CardTitle className="text-base font-medium text-secondary-foreground">Acheteurs</CardTitle>
               <ShoppingCart className="h-5 w-5 text-accent" />
             </CardHeader>
-            <CardContent className="p-4 space-y-1"> {/* Added space-y-1 */}
+            <CardContent className="p-4 space-y-1 flex-grow"> {/* Allow content to grow */}
               <div className="text-2xl font-bold text-primary">Manage Buyers</div>
               <p className="text-xs text-muted-foreground">View, add, edit, and delete buyer accounts.</p>
             </CardContent>
@@ -26,13 +28,13 @@ export default function DashboardPage() {
         </Link>
 
         {/* Seller Card */}
-        <Link href="/dashboard/users/vendeurs" className="focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 rounded-lg">
-          <Card className="hover:shadow-lg transition-shadow duration-200 cursor-pointer border border-border bg-card text-card-foreground rounded-lg overflow-hidden group">
+        <Link href="/dashboard/users/vendeurs" className={`block focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 rounded-lg ${cardAnimation} delay-200 fill-mode-backwards`}>
+          <Card className="hover:shadow-lg transition-shadow duration-200 cursor-pointer border border-border bg-card text-card-foreground rounded-lg overflow-hidden group h-full flex flex-col">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 p-4 bg-secondary/30 group-hover:bg-secondary/50 transition-colors">
               <CardTitle className="text-base font-medium text-secondary-foreground">Vendeurs</CardTitle>
               <Building className="h-5 w-5 text-accent" />
             </CardHeader>
-            <CardContent className="p-4 space-y-1"> {/* Added space-y-1 */}
+            <CardContent className="p-4 space-y-1 flex-grow">
               <div className="text-2xl font-bold text-primary">Manage Sellers</div>
               <p className="text-xs text-muted-foreground">View, add, edit, and delete seller accounts.</p>
             </CardContent>
@@ -40,13 +42,13 @@ export default function DashboardPage() {
         </Link>
 
         {/* Manager Card */}
-        <Link href="/dashboard/users/gestionnaires" className="focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 rounded-lg">
-          <Card className="hover:shadow-lg transition-shadow duration-200 cursor-pointer border border-border bg-card text-card-foreground rounded-lg overflow-hidden group">
+        <Link href="/dashboard/users/gestionnaires" className={`block focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 rounded-lg ${cardAnimation} delay-300 fill-mode-backwards`}>
+          <Card className="hover:shadow-lg transition-shadow duration-200 cursor-pointer border border-border bg-card text-card-foreground rounded-lg overflow-hidden group h-full flex flex-col">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 p-4 bg-secondary/30 group-hover:bg-secondary/50 transition-colors">
               <CardTitle className="text-base font-medium text-secondary-foreground">Gestionnaires</CardTitle>
               <UserCog className="h-5 w-5 text-accent" />
             </CardHeader>
-            <CardContent className="p-4 space-y-1"> {/* Added space-y-1 */}
+            <CardContent className="p-4 space-y-1 flex-grow">
               <div className="text-2xl font-bold text-primary">Manage Managers</div>
               <p className="text-xs text-muted-foreground">View, add, edit, and delete manager accounts.</p>
             </CardContent>
@@ -54,13 +56,13 @@ export default function DashboardPage() {
         </Link>
 
         {/* Admin Card */}
-         <Link href="/dashboard/users/admins" className="focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 rounded-lg">
-           <Card className="hover:shadow-lg transition-shadow duration-200 cursor-pointer border border-border bg-card text-card-foreground rounded-lg overflow-hidden group">
+         <Link href="/dashboard/users/admins" className={`block focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 rounded-lg ${cardAnimation} delay-400 fill-mode-backwards`}>
+           <Card className="hover:shadow-lg transition-shadow duration-200 cursor-pointer border border-border bg-card text-card-foreground rounded-lg overflow-hidden group h-full flex flex-col">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 p-4 bg-secondary/30 group-hover:bg-secondary/50 transition-colors">
               <CardTitle className="text-base font-medium text-secondary-foreground">Admins</CardTitle>
               <ShieldCheck className="h-5 w-5 text-accent" />
             </CardHeader>
-            <CardContent className="p-4 space-y-1"> {/* Added space-y-1 */}
+            <CardContent className="p-4 space-y-1 flex-grow">
               <div className="text-2xl font-bold text-primary">Manage Admins</div>
               <p className="text-xs text-muted-foreground">View, add, edit, and delete admin accounts.</p>
             </CardContent>

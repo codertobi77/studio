@@ -64,8 +64,8 @@ export default function ProfilePage() {
 
   return (
     <div className="space-y-6 max-w-2xl mx-auto">
-      <h1 className="text-3xl font-bold text-primary">User Profile</h1>
-      <Card className="shadow-md border border-border">
+      <h1 className="text-3xl font-bold text-primary animate-in fade-in duration-300">User Profile</h1>
+      <Card className="shadow-md border border-border animate-in fade-in slide-in-from-bottom-4 duration-500 delay-100 fill-mode-backwards">
         <CardHeader>
           <CardTitle className="flex items-center gap-2 text-xl">
             <User className="h-6 w-6 text-primary"/> {/* Slightly larger icon */}

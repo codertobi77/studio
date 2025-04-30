@@ -52,13 +52,14 @@ export default function LoginPage() {
     setIsLoading(true);
     try {
       const result = await login(data);
-      if (result.token) {
-        // Use Cookies for middleware compatibility + localStorage for client access
-        document.cookie = `authToken=${result.token}; path=/; max-age=86400; SameSite=Lax`; // 1 day expiry, Lax recommended
-        localStorage.setItem("authToken", result.token);
-      }
+      // Removed token handling logic as it relies on mock API response structure
+      // It will be handled by the actual API call's success path
 
-      if (result.success) {
+      if (result.success && result.token) {
+         // Use Cookies for middleware compatibility + localStorage for client access
+         document.cookie = `authToken=${result.token}; path=/; max-age=86400; SameSite=Lax`; // 1 day expiry, Lax recommended
+         localStorage.setItem("authToken", result.token);
+
         toast({
           title: "Login Successful",
           description: result.message || "Welcome back!",
@@ -67,12 +68,12 @@ export default function LoginPage() {
         const redirectedFrom = new URLSearchParams(window.location.search).get('redirectedFrom');
         router.push(redirectedFrom || "/dashboard");
       } else {
-        // Clear potentially invalid token if login explicitly fails
+        // Clear potentially invalid token if login explicitly fails or no token received
         document.cookie = 'authToken=; path=/; max-age=0; SameSite=Lax';
         localStorage.removeItem("authToken");
         toast({
           title: "Login Failed",
-          description: result.message || "Invalid credentials provided.",
+          description: result.message || "Invalid credentials or missing token.",
           variant: "destructive",
         });
       }
@@ -93,7 +94,7 @@ export default function LoginPage() {
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-background to-muted/50 p-4"> {/* Subtle gradient */}
-      <Card className="w-full max-w-md shadow-xl border border-border/50 bg-card/95 backdrop-blur-sm rounded-xl"> {/* Enhanced styling */}
+      <Card className="w-full max-w-md shadow-xl border border-border/50 bg-card/95 backdrop-blur-sm rounded-xl animate-in fade-in duration-500"> {/* Enhanced styling + Animation */}
         <CardHeader className="space-y-2 text-center p-6">
            <div className="flex justify-center mb-4">
               {/* Placeholder Logo/Icon */}

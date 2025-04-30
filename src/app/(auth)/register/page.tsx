@@ -90,7 +90,7 @@ export default function RegisterPage() {
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-background to-muted/50 p-4"> {/* Subtle gradient */}
-      <Card className="w-full max-w-md shadow-xl border border-border/50 bg-card/95 backdrop-blur-sm rounded-xl"> {/* Enhanced styling */}
+      <Card className="w-full max-w-md shadow-xl border border-border/50 bg-card/95 backdrop-blur-sm rounded-xl animate-in fade-in duration-500"> {/* Enhanced styling + Animation */}
         <CardHeader className="space-y-2 text-center p-6">
             <div className="flex justify-center mb-4">
               {/* Placeholder Logo/Icon */}
