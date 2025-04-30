@@ -27,6 +27,7 @@ export type CreateUserData = Omit<User, 'id' | 'createdAt' | 'isVerified'> & { p
 export type UpdateUserData = Partial<Omit<User, 'id' | 'role' | 'createdAt'>> & { password?: string }; // Password optional for update
 
 
+// Updated API base URL as per user request
 const API_BASE_URL = "/api/admin"; // Base URL for admin API endpoints
 
 // Helper to simulate API delay
@@ -52,6 +53,15 @@ const getAuthHeaders = (): HeadersInit => {
 
 // Helper function to handle API responses
 async function handleApiResponse<T>(response: Response): Promise<T> {
+    // Check for 204 No Content before attempting to parse JSON
+    if (response.status === 204) {
+        console.log("API Success (204 No Content)");
+        // Return an empty object or null/undefined as appropriate for the expected type T
+        // For void functions, just return. For others, adjust as needed.
+        // This assumes T can accommodate an empty object or null-like structure.
+        return {} as T;
+    }
+
     const result = await response.json();
     if (!response.ok) {
         console.error(`API Error (${response.status}):`, result);
@@ -65,13 +75,16 @@ async function handleApiResponse<T>(response: Response): Promise<T> {
         throw new Error(result.message || `Request failed with status ${response.status}`);
     }
     console.log("API Success:", result);
-    return result.data || result; // Assuming data might be nested under 'data' key, or is the root object
+    // Adjust based on expected API response structure.
+    // Common patterns: return result.data, return result, or handle nested structures.
+    // Assuming the main data is directly in the result object or possibly nested under 'data'.
+    return result.data || result;
 }
 
 
 /**
  * Asynchronously retrieves all users for a given role via API.
- *
+ * Endpoint: GET /api/admin/{role}
  * @param role The role of the users to retrieve.
  * @returns A promise that resolves to an array of User objects.
  * @throws Will throw an error if the API call fails.
@@ -85,8 +98,10 @@ export async function getUsers(role: Role): Promise<User[]> {
           method: 'GET',
           headers: getAuthHeaders(),
       });
-      const result = await handleApiResponse<{ users: User[] }>(response); // Expect { users: [...] }
-      return result.users || []; // Return users array or empty if missing
+      // Adjust based on how the API returns the list (e.g., directly as array or nested)
+      const result = await handleApiResponse<User[] | { users: User[] }>(response);
+      // Handle both direct array response and nested { users: [...] }
+      return Array.isArray(result) ? result : result.users || [];
   } catch (error) {
       console.error(`Failed to fetch ${role} users:`, error);
       throw error; // Re-throw the error to be handled by the caller
@@ -95,7 +110,7 @@ export async function getUsers(role: Role): Promise<User[]> {
 
 /**
  * Asynchronously retrieves a single user by ID and role via API.
- *
+ * Endpoint: GET /api/admin/{role}/{id}
  * @param role The role of the user.
  * @param id The ID of the user.
  * @returns A promise that resolves to a User object or null if not found (API should return 404).
@@ -114,8 +129,9 @@ export async function getUser(role: Role, id: string): Promise<User | null> {
             console.log(`User ${id} (${role}) not found.`);
             return null; // Return null if API returns 404
         }
-       const result = await handleApiResponse<{ user: User }>(response); // Expect { user: {...} }
-       return result.user;
+       // Adjust based on how the API returns the single user (e.g., directly or nested)
+       const result = await handleApiResponse<User | { user: User }>(response);
+       return (result && 'user' in result) ? result.user : result;
    } catch (error) {
        console.error(`Failed to fetch user ${id} (${role}):`, error);
        throw error;
@@ -124,7 +140,7 @@ export async function getUser(role: Role, id: string): Promise<User | null> {
 
 /**
  * Asynchronously creates a new user via API.
- *
+ * Endpoint: POST /api/admin/{role}
  * @param role The role of the user to create.
  * @param userData The data for the new user (including password).
  * @returns A promise that resolves to the created User object.
@@ -144,8 +160,9 @@ export async function createUser(role: Role, userData: CreateUserData): Promise<
            headers: getAuthHeaders(),
            body: JSON.stringify(userData),
        });
-       const result = await handleApiResponse<{ user: User }>(response); // Expect { user: {...} }
-       return result.user;
+        // Adjust based on how the API returns the created user
+       const result = await handleApiResponse<User | { user: User }>(response);
+       return (result && 'user' in result) ? result.user : result;
    } catch (error) {
        console.error(`Failed to create ${role} user:`, error);
        throw error;
@@ -154,7 +171,7 @@ export async function createUser(role: Role, userData: CreateUserData): Promise<
 
 /**
  * Asynchronously updates an existing user via API.
- *
+ * Endpoint: PUT /api/admin/{role}/{id}
  * @param role The role of the user.
  * @param id The ID of the user to update.
  * @param userData The fields to update (password is optional).
@@ -177,8 +194,9 @@ export async function updateUser(role: Role, id: string, userData: UpdateUserDat
            headers: getAuthHeaders(),
            body: JSON.stringify(updateData),
        });
-       const result = await handleApiResponse<{ user: User }>(response); // Expect { user: {...} }
-       return result.user;
+        // Adjust based on how the API returns the updated user
+       const result = await handleApiResponse<User | { user: User }>(response);
+       return (result && 'user' in result) ? result.user : result;
    } catch (error) {
        console.error(`Failed to update user ${id} (${role}):`, error);
        throw error;
@@ -187,7 +205,7 @@ export async function updateUser(role: Role, id: string, userData: UpdateUserDat
 
 /**
  * Asynchronously deletes a user by ID and role via API.
- *
+ * Endpoint: DELETE /api/admin/{role}/{id}
  * @param role The role of the user.
  * @param id The ID of the user to delete.
  * @returns A promise that resolves to void on success.
@@ -209,8 +227,8 @@ export async function deleteUser(role: Role, id: string): Promise<void> {
             return; // Success
         }
 
-       // If not 204, handle as usual (expecting JSON potentially)
-       await handleApiResponse(response); // Check for errors, ignore success body if any
+       // If not 204, handle as usual (expecting JSON potentially, or maybe just status check)
+       await handleApiResponse<void>(response); // Check for errors, ignore success body if any
        console.log(`User ${id} (${role}) deleted successfully (Status ${response.status}).`);
 
    } catch (error) {

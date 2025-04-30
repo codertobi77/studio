@@ -1,12 +1,9 @@
 import type { Metadata } from 'next';
-import { GeistSans } from 'geist/font/sans';
-import { GeistMono } from 'geist/font/mono';
+// Removed GeistSans and GeistMono imports as they were causing errors and not explicitly used in className
+// import { GeistSans } from 'geist/font/sans';
+// import { GeistMono } from 'geist/font/mono';
 import './globals.css';
 import { Toaster } from '@/components/ui/toaster';
-
-// Rename the imported variables to avoid conflict if needed, or use directly
-// const geistSans = GeistSans; // This is redundant, can use GeistSans directly
-// const geistMono = GeistMono; // This is redundant, can use GeistMono directly
 
 export const metadata: Metadata = {
   title: 'Marketplace Admin Hub',
@@ -20,9 +17,10 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      {/* Apply the font variables directly using the imported font objects */}
+      {/* Apply basic font-sans class, relying on globals.css for specific font variables */}
       <body
-        className={`${GeistSans.variable} ${GeistMono.variable} font-sans antialiased`}
+        // className={`${GeistSans.variable} ${GeistMono.variable} font-sans antialiased`} // Removed font variables
+        className={`font-sans antialiased`} // Simplified className
       >
         {children}
         <Toaster />
