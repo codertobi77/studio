@@ -18,6 +18,7 @@ export default function RootLayout({
       <body
         className={`font-sans antialiased`}
       >
+        {/* Wrap with ThemeProvider here to cover all layouts */}
         <ThemeProvider
             attribute="class"
             defaultTheme="system"
