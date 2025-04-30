@@ -1,12 +1,12 @@
 "use client";
 
 import * as React from "react";
-import { useParams, useRouter, usePathname } from "next/navigation"; // Added usePathname
+import { useParams, useRouter } from "next/navigation";
 import { getUsers, deleteUser, User, Role } from "@/services/admin";
 import { UserTable } from "@/components/user-table";
 import { UserFormDialog } from "@/components/user-form-dialog";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { Terminal } from "lucide-react"; // Icon for error
+import { Terminal, AlertTriangle } from "lucide-react"; // Added AlertTriangle for invalid role
 
 // Helper to validate role from URL params
 const isValidRole = (role: string | string[] | undefined): role is Role => {
@@ -14,7 +14,7 @@ const isValidRole = (role: string | string[] | undefined): role is Role => {
   return ['acheteur', 'vendeur', 'gestionnaire', 'admin'].includes(role);
 };
 
-// Map roles to display names (optional, for better UI text)
+// Map roles to display names
 const roleDisplayNames: Record<Role, string> = {
     acheteur: "Buyers",
     vendeur: "Sellers",
@@ -25,7 +25,6 @@ const roleDisplayNames: Record<Role, string> = {
 export default function UsersPage() {
   const params = useParams();
   const router = useRouter();
-  const pathname = usePathname(); // Get current path for better feedback
   const roleParam = params.role;
 
   const [users, setUsers] = React.useState<User[]>([]);
@@ -44,15 +43,17 @@ export default function UsersPage() {
 
   React.useEffect(() => {
     if (!role) {
-      setError(`Invalid user role specified in URL: ${roleParam}. Please select a valid role.`);
+      // Set a specific error message for invalid role
+      setError(`Invalid user role specified: "${roleParam}". Please select a valid role from the dashboard.`);
       setIsLoading(false);
-      // No automatic redirect, show error message instead
+      setUsers([]); // Clear any potentially stale user data
       return;
     }
 
-    // Clear previous errors when role changes
+    // Clear previous errors and reset loading state when role changes
     setError(null);
     setIsLoading(true);
+    setUsers([]); // Clear users while loading new role data
 
     const fetchUsers = async () => {
       try {
@@ -60,7 +61,7 @@ export default function UsersPage() {
         setUsers(fetchedUsers);
       } catch (err) {
         console.error(`Failed to fetch ${roleDisplayNames[role]}:`, err);
-        const errorMessage = err instanceof Error ? err.message : `Failed to load ${roleDisplayNames[role]}. Please try again later.`;
+        const errorMessage = err instanceof Error ? err.message : `Failed to load ${roleDisplayNames[role]}. Please check connectivity or try again later.`;
         setError(errorMessage);
       } finally {
         setIsLoading(false);
@@ -68,10 +69,10 @@ export default function UsersPage() {
     };
 
     fetchUsers();
-  }, [role, roleParam]); // Depend on validated 'role' and original 'roleParam' for error message
+  }, [role, roleParam]); // Rerun effect when the validated 'role' changes
 
    const handleAddUser = () => {
-    setUserToEdit(null); // Ensure we are in 'add' mode
+    setUserToEdit(null);
     setIsFormOpen(true);
   };
 
@@ -81,81 +82,79 @@ export default function UsersPage() {
   };
 
   const handleDeleteUser = async (userId: string) => {
-     if (!role) return; // Should not happen if UI is driven by valid role, but good practice
+     if (!role) return; // Safety check
 
-     const previousUsers = [...users]; // Create a shallow copy for potential revert
-     // Optimistic UI update: Remove user immediately
+     const previousUsers = [...users];
      setUsers(currentUsers => currentUsers.filter(user => user.id !== userId));
 
     try {
       await deleteUser(role, userId);
-       // No need to refetch if optimistic update is correct
-       // const fetchedUsers = await getUsers(role); // Optionally refetch if backend might have side effects
-       // setUsers(fetchedUsers);
+       // Success handled via toast in UserTable
     } catch (err) {
        console.error("Delete user failed:", err);
-       // Revert optimistic update if deletion failed
-       setUsers(previousUsers);
-       // Re-throw the error so the UserTable component can show a toast
-       throw err; // Propagate error to UserTable for toast notification
+       setUsers(previousUsers); // Revert optimistic update
+       throw err; // Propagate for toast notification
     }
   };
 
   const handleUserSaved = (savedUser: User) => {
      setUsers(currentUsers => {
-        const userExists = currentUsers.some(user => user.id === savedUser.id);
-        if (userExists) {
-            // Update existing user
-            return currentUsers.map(user => (user.id === savedUser.id ? savedUser : user));
+        const userIndex = currentUsers.findIndex(user => user.id === savedUser.id);
+        if (userIndex > -1) {
+            // Update existing user in place
+            const updatedUsers = [...currentUsers];
+            updatedUsers[userIndex] = savedUser;
+            return updatedUsers;
         } else {
-            // Add new user
+            // Add new user to the end (or beginning)
             return [...currentUsers, savedUser];
         }
      });
-     // Close the form after saving
      setIsFormOpen(false);
-     setUserToEdit(null); // Reset edit state
+     setUserToEdit(null);
    };
 
-  // Render error message if the role is invalid after initial check
-  if (!role && !isLoading) {
+  // Render error message clearly if the role is invalid (checked after initial load/validation)
+  if (!isLoading && !role) {
      return (
-        <div className="container mx-auto py-10">
-             <Alert variant="destructive">
-               <Terminal className="h-4 w-4" />
-               <AlertTitle>Invalid Role</AlertTitle>
-               <AlertDescription>{error}</AlertDescription>
-               {/* Optional: Button to go back */}
-               {/* <Button onClick={() => router.back()} variant="outline" className="mt-4">Go Back</Button> */}
+        <div className="container mx-auto py-10 px-4 md:px-6">
+             <Alert variant="destructive" className="max-w-2xl mx-auto">
+               <AlertTriangle className="h-4 w-4" /> {/* More appropriate icon */}
+               <AlertTitle>Invalid Role Specified</AlertTitle>
+               <AlertDescription>
+                   {error || `The role "${roleParam}" is not valid.`} Please navigate using the dashboard links.
+                </AlertDescription>
+               {/* <Button onClick={() => router.push('/dashboard')} variant="outline" className="mt-4">Go to Dashboard</Button> */}
              </Alert>
         </div>
      );
    }
 
-   // Render loading or table based on state
    // Role is guaranteed to be valid here if we didn't return the error component
-   const validRole = role as Role; // Type assertion is safe here
+   const validRole = role as Role; // Type assertion is safe
 
   return (
-    <div className="container mx-auto py-6">
+    <div className="container mx-auto py-6 px-4 md:px-6"> {/* Consistent padding */}
       <UserTable
         users={users}
-        role={validRole} // Pass the validated role
-        roleDisplayName={roleDisplayNames[validRole]} // Pass display name
+        role={validRole}
+        roleDisplayName={roleDisplayNames[validRole]}
         isLoading={isLoading}
-        error={error && !users.length ? error : null} // Only show table-level error if no users are displayed
+        // Show main error if loading failed AND there are no users currently displayed
+        error={error && !isLoading && users.length === 0 ? error : null}
         onAdd={handleAddUser}
         onEdit={handleEditUser}
         onDelete={handleDeleteUser}
       />
-       {isFormOpen && ( // Conditionally render dialog to ensure clean state on open
+       {/* Conditionally render dialog to ensure clean state on open */}
+       {isFormOpen && (
          <UserFormDialog
             isOpen={isFormOpen}
             onClose={() => {
                 setIsFormOpen(false);
-                setUserToEdit(null); // Reset edit state on close
+                setUserToEdit(null);
             }}
-            role={validRole} // Pass the validated role
+            role={validRole}
             userToEdit={userToEdit}
             onUserSaved={handleUserSaved}
          />

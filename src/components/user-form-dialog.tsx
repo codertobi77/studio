@@ -13,6 +13,7 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
+  DialogClose, // Import DialogClose
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import {
@@ -22,36 +23,32 @@ import {
   FormItem,
   FormLabel,
   FormMessage,
-  FormDescription, // Import FormDescription
+  FormDescription,
 } from "@/components/ui/form";
-import { User, Role, createUser, updateUser } from "@/services/admin"; // Combined imports
+import { User, Role, createUser, updateUser } from "@/services/admin";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2 } from "lucide-react"; // Import Loader2
+import { Loader2, UserCircle, UserPlus } from "lucide-react"; // Added icons
 
-// Schema definition based on User interface and requirements
+// Schema definition remains the same
 const userFormSchemaBase = z.object({
   username: z.string().min(3, { message: "Username must be at least 3 characters." }).trim(),
   email: z.string().email({ message: "Invalid email address." }).trim(),
-  // Role is passed via props, not part of the form data itself
 });
 
-// Schema for adding a user (password required)
 const addUserSchema = userFormSchemaBase.extend({
     password: z.string().min(6, { message: "Password must be at least 6 characters." }),
 });
 
-// Schema for editing a user (password optional)
 const editUserSchema = userFormSchemaBase.extend({
-    password: z.string().min(6, { message: "Password must be at least 6 characters." }).optional().or(z.literal('')), // Allow empty string or min 6 chars
+    password: z.string().min(6, { message: "Password must be at least 6 characters." }).optional().or(z.literal('')),
 });
-
 
 interface UserFormDialogProps {
   isOpen: boolean;
   onClose: () => void;
   role: Role;
-  userToEdit: User | null; // Pass user data for editing, null for adding
-  onUserSaved: (user: User) => void; // Callback after saving
+  userToEdit: User | null;
+  onUserSaved: (user: User) => void;
 }
 
 export function UserFormDialog({
@@ -65,18 +62,15 @@ export function UserFormDialog({
   const [isLoading, setIsLoading] = React.useState(false);
   const isEditing = !!userToEdit;
 
-  // Dynamically select the schema based on add/edit mode
   const currentSchema = isEditing ? editUserSchema : addUserSchema;
   type CurrentUserFormValues = z.infer<typeof currentSchema>;
 
   const form = useForm<CurrentUserFormValues>({
     resolver: zodResolver(currentSchema),
-    defaultValues: isEditing
-      ? { username: userToEdit?.username || "", email: userToEdit?.email || "", password: "" }
-      : { username: "", email: "", password: "" },
+    // Default values are set in useEffect
   });
 
-  // Reset form when dialog opens and based on edit/add mode
+  // Reset form when dialog opens or userToEdit changes
   React.useEffect(() => {
     if (isOpen) {
       form.reset(
@@ -84,7 +78,6 @@ export function UserFormDialog({
           ? { username: userToEdit?.username || "", email: userToEdit?.email || "", password: "" }
           : { username: "", email: "", password: "" }
       );
-      // Clear potential previous errors
       form.clearErrors();
     }
   }, [isOpen, isEditing, userToEdit, form]);
@@ -94,50 +87,47 @@ export function UserFormDialog({
     setIsLoading(true);
     try {
       let savedUser: User;
-       // Prepare data, removing password if it's empty during edit
-       const userData: Partial<Omit<User, 'id' | 'role'>> & { password?: string } = {
+      const userData: Partial<Omit<User, 'id' | 'role'>> & { password?: string } = {
          username: data.username,
          email: data.email,
-       };
+      };
 
-      // Only include password if it's provided (and not empty for edits)
       if (data.password && data.password.trim() !== '') {
          userData.password = data.password;
-      } else if (!isEditing) {
-          // This case should be caught by validation, but as a fallback:
-          form.setError("password", { type: "manual", message: "Password is required for new users." });
+      } else if (!isEditing && (!data.password || data.password.trim() === '')) {
+          // Re-validate password requirement for adding user (should be caught by zod, but good fallback)
+          form.setError("password", { type: "manual", message: "Password is required when adding a new user." });
           setIsLoading(false);
           return;
       }
 
-
       if (isEditing && userToEdit) {
-        // Call updateUser API
-        savedUser = await updateUser(role, userToEdit.id, { ...userData, role }); // Pass validated role
+        savedUser = await updateUser(role, userToEdit.id, { ...userData, role });
         toast({
-          title: "User Updated",
-          description: `User "${savedUser.username}" has been updated successfully.`,
+          title: "User Updated Successfully",
+          description: `Details for ${savedUser.username} (${role}) have been saved.`,
         });
       } else {
-        // Call createUser API - password is required by schema here
+        // Create user requires password ensured by schema/check above
         savedUser = await createUser(role, {
-            username: userData.username!, // username is required by base schema
-            email: userData.email!, // email is required by base schema
-            password: userData.password!, // password is required by addUserSchema
-            role: role // Pass validated role
+            username: userData.username!,
+            email: userData.email!,
+            password: userData.password!,
+            role: role
         });
         toast({
-          title: "User Created",
-          description: `User "${savedUser.username}" has been created successfully.`,
+          title: "User Created Successfully",
+          description: `${savedUser.username} (${role}) has been added. Email verification may be required.`,
         });
       }
-      onUserSaved(savedUser); // Notify parent component
-      onClose(); // Close dialog on success
+      onUserSaved(savedUser);
+      onClose();
     } catch (error) {
       console.error("Failed to save user:", error);
-      const errorMessage = error instanceof Error ? error.message : `Could not ${isEditing ? 'update' : 'create'} the user. Please try again.`;
+      const action = isEditing ? 'update' : 'create';
+      const errorMessage = error instanceof Error ? error.message : `Could not ${action} the user. Please check the details and try again.`;
       toast({
-        title: "Save Failed",
+        title: `Failed to ${action.charAt(0).toUpperCase() + action.slice(1)} User`,
         description: errorMessage,
         variant: "destructive",
       });
@@ -146,23 +136,26 @@ export function UserFormDialog({
     }
   }
 
-  // Determine title and description based on edit/add mode
+  // Dynamic title and description
   const roleDisplayName = role.charAt(0).toUpperCase() + role.slice(1);
-  const title = isEditing ? `Edit ${roleDisplayName}: ${userToEdit?.username}` : `Add New ${roleDisplayName}`;
-  const description = isEditing ? "Make changes to the user's details below." : `Enter the details for the new ${role}. Email verification might be required.`;
-
+  const title = isEditing ? `Edit ${roleDisplayName}` : `Add New ${roleDisplayName}`;
+  const description = isEditing
+    ? `Modify the details for ${userToEdit?.username || 'this user'}.`
+    : `Enter the details for the new ${roleDisplayName.toLowerCase()}.`;
+  const Icon = isEditing ? UserCircle : UserPlus;
 
   return (
-    // Use onOpenChange to handle closing via 'x' or outside click
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="sm:max-w-[480px]"> {/* Slightly wider dialog */}
-        <DialogHeader>
-          <DialogTitle>{title}</DialogTitle>
+      <DialogContent className="sm:max-w-lg"> {/* Adjusted max-width */}
+        <DialogHeader className="mb-4"> {/* Added margin bottom */}
+          <div className="flex items-center gap-3 mb-2">
+              <Icon className="h-6 w-6 text-primary" />
+              <DialogTitle className="text-xl">{title}</DialogTitle> {/* Slightly larger title */}
+          </div>
           <DialogDescription>{description}</DialogDescription>
         </DialogHeader>
         <Form {...form}>
-          {/* Pass role explicitly to form if needed elsewhere, or use it directly */}
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-5 pt-4 pb-2"> {/* Adjusted padding and spacing */}
+          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6"> {/* Increased spacing */}
             <FormField
               control={form.control}
               name="username"
@@ -170,7 +163,7 @@ export function UserFormDialog({
                 <FormItem>
                   <FormLabel>Username</FormLabel>
                   <FormControl>
-                    <Input placeholder="john.doe" {...field} disabled={isLoading} />
+                    <Input placeholder="e.g., john.doe" {...field} disabled={isLoading} className="bg-input focus:ring-primary focus:border-primary"/>
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -181,9 +174,9 @@ export function UserFormDialog({
               name="email"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Email</FormLabel>
+                  <FormLabel>Email Address</FormLabel>
                   <FormControl>
-                    <Input type="email" placeholder="user@example.com" {...field} disabled={isLoading} />
+                    <Input type="email" placeholder="e.g., user@example.com" {...field} disabled={isLoading} className="bg-input focus:ring-primary focus:border-primary"/>
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -196,20 +189,29 @@ export function UserFormDialog({
                 <FormItem>
                   <FormLabel>Password</FormLabel>
                   <FormControl>
-                    <Input type="password" placeholder={isEditing ? "Leave blank to keep current password" : "Enter password"} {...field} disabled={isLoading} />
+                    <Input
+                        type="password"
+                        placeholder={isEditing ? "Leave blank to keep current" : "Enter password"}
+                        {...field}
+                        disabled={isLoading}
+                        className="bg-input focus:ring-primary focus:border-primary"
+                    />
                   </FormControl>
                    <FormDescription>
-                      {isEditing ? "Enter a new password only if you want to change it." : "Minimum 6 characters required."}
+                      {isEditing ? "Enter a new password only if you want to change it (min. 6 characters)." : "Minimum 6 characters required."}
                     </FormDescription>
                   <FormMessage />
                 </FormItem>
               )}
             />
-             <DialogFooter className="pt-4"> {/* Add padding top */}
-                <Button type="button" variant="outline" onClick={onClose} disabled={isLoading}>Cancel</Button>
-                <Button type="submit" disabled={isLoading} className="min-w-[120px]"> {/* Minimum width for button */}
+             <DialogFooter className="pt-6 gap-2 sm:gap-0"> {/* Added gap for mobile */}
+                {/* Use DialogClose for the cancel button for better accessibility */}
+                <DialogClose asChild>
+                    <Button type="button" variant="outline" disabled={isLoading}>Cancel</Button>
+                </DialogClose>
+                <Button type="submit" disabled={isLoading} className="min-w-[120px]">
                    {isLoading ? (
-                       <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> {isEditing ? "Saving..." : "Creating..."}</>
+                       <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Saving...</>
                    ) : (
                        isEditing ? "Save Changes" : "Create User"
                    )}

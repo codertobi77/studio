@@ -26,11 +26,11 @@ import {
 import { useToast } from "@/hooks/use-toast";
 import { login } from "@/services/auth";
 import Link from "next/link";
-import { Loader2 } from "lucide-react"; // Import Loader2
+import { Loader2, Briefcase } from "lucide-react"; // Used Briefcase as a generic business icon
 
 const loginSchema = z.object({
   email: z.string().email({ message: "Invalid email address." }),
-  password: z.string().min(1, { message: "Password is required." }), // Changed min to 1 as 6 might be too restrictive for login
+  password: z.string().min(1, { message: "Password is required." }),
 });
 
 type LoginFormValues = z.infer<typeof loginSchema>;
@@ -52,69 +52,74 @@ export default function LoginPage() {
     setIsLoading(true);
     try {
       const result = await login(data);
-      // Store token regardless of success to attempt profile fetch in layout
       if (result.token) {
-        // Use Cookies for middleware compatibility
-        document.cookie = `authToken=${result.token}; path=/; max-age=86400`; // Example: 1 day expiry
-        // Also keep in localStorage for client-side access if needed, but middleware relies on cookie
+        // Use Cookies for middleware compatibility + localStorage for client access
+        document.cookie = `authToken=${result.token}; path=/; max-age=86400; SameSite=Lax`; // 1 day expiry, Lax recommended
         localStorage.setItem("authToken", result.token);
       }
 
       if (result.success) {
         toast({
           title: "Login Successful",
-          description: result.message,
+          description: result.message || "Welcome back!",
         });
-        router.push("/dashboard"); // Redirect to dashboard after successful login
+        // Redirect based on 'redirectedFrom' or default to dashboard
+        const redirectedFrom = new URLSearchParams(window.location.search).get('redirectedFrom');
+        router.push(redirectedFrom || "/dashboard");
       } else {
         // Clear potentially invalid token if login explicitly fails
-        document.cookie = 'authToken=; path=/; max-age=0';
+        document.cookie = 'authToken=; path=/; max-age=0; SameSite=Lax';
         localStorage.removeItem("authToken");
         toast({
           title: "Login Failed",
-          description: result.message,
+          description: result.message || "Invalid credentials provided.",
           variant: "destructive",
         });
       }
     } catch (error) {
-       // Clear potentially invalid token on error
-       document.cookie = 'authToken=; path=/; max-age=0';
+       document.cookie = 'authToken=; path=/; max-age=0; SameSite=Lax';
        localStorage.removeItem("authToken");
-      console.error("Login error:", error);
-      const errorMessage = error instanceof Error ? error.message : "Please try again later.";
-      toast({
-        title: "An error occurred",
-        description: errorMessage,
-        variant: "destructive",
-      });
+       console.error("Login error:", error);
+       const errorMessage = error instanceof Error ? error.message : "An unexpected error occurred. Please try again.";
+       toast({
+         title: "Login Error",
+         description: errorMessage,
+         variant: "destructive",
+       });
     } finally {
       setIsLoading(false);
     }
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-background p-4">
-      <Card className="w-full max-w-md shadow-lg border border-border"> {/* Added border */}
-        <CardHeader className="space-y-2 text-center"> {/* Increased spacing */}
+    <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-background to-muted/50 p-4"> {/* Subtle gradient */}
+      <Card className="w-full max-w-md shadow-xl border border-border/50 bg-card/95 backdrop-blur-sm rounded-xl"> {/* Enhanced styling */}
+        <CardHeader className="space-y-2 text-center p-6">
+           <div className="flex justify-center mb-4">
+              {/* Placeholder Logo/Icon */}
+              <div className="p-3 rounded-full bg-primary/10 border border-primary/20">
+                 <Briefcase className="h-8 w-8 text-primary" />
+              </div>
+           </div>
           <CardTitle className="text-2xl font-bold text-primary">Marketplace Admin Hub</CardTitle>
-          <CardDescription>Enter your credentials to access the admin dashboard</CardDescription>
+          <CardDescription>Sign in to manage your marketplace</CardDescription>
         </CardHeader>
-        <CardContent>
+        <CardContent className="p-6">
           <Form {...form}>
-            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6"> {/* Increased spacing */}
+            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
               <FormField
                 control={form.control}
                 name="email"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Email</FormLabel>
+                    <FormLabel>Email Address</FormLabel>
                     <FormControl>
                       <Input
                         type="email"
                         placeholder="admin@example.com"
                         {...field}
                         disabled={isLoading}
-                        className="bg-input" // Explicitly set background
+                        className="bg-input focus:ring-primary focus:border-primary" // Enhanced focus state
                       />
                     </FormControl>
                     <FormMessage />
@@ -133,31 +138,39 @@ export default function LoginPage() {
                         placeholder="••••••••"
                         {...field}
                         disabled={isLoading}
-                        className="bg-input" // Explicitly set background
+                        className="bg-input focus:ring-primary focus:border-primary" // Enhanced focus state
                       />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
                 )}
               />
-              <Button type="submit" className="w-full bg-primary hover:bg-primary/90 text-primary-foreground" disabled={isLoading}>
-                {isLoading ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Logging in...</> : "Login"}
+              <Button type="submit" className="w-full bg-primary hover:bg-primary/90 text-primary-foreground py-3 text-base" disabled={isLoading}> {/* Larger button */}
+                {isLoading ? <><Loader2 className="mr-2 h-5 w-5 animate-spin" /> Signing In...</> : "Sign In"}
               </Button>
             </form>
           </Form>
-          <div className="mt-6 text-center text-sm space-y-2"> {/* Increased margin and added spacing */}
-             <p>
+          <div className="mt-8 text-center text-sm space-y-3"> {/* Increased margin */}
+             <p className="text-muted-foreground">
                 Don't have an account?{" "}
-                <Link href="/register" className="font-medium text-accent hover:text-accent/80 underline underline-offset-4">
-                  Register
+                <Link href="/register" className="font-medium text-accent hover:text-accent/80 underline underline-offset-4 focus:outline-none focus:ring-1 focus:ring-accent rounded px-0.5">
+                  Register here
                 </Link>
              </p>
-            <p>
+            <p className="text-muted-foreground">
               Need to verify your email?{" "}
-              <Link href="/verify-email" className="font-medium text-accent hover:text-accent/80 underline underline-offset-4">
+              <Link href="/verify-email" className="font-medium text-accent hover:text-accent/80 underline underline-offset-4 focus:outline-none focus:ring-1 focus:ring-accent rounded px-0.5">
                 Verify Email
               </Link>
             </p>
+             {/* Optional: Forgot password link */}
+             {/*
+             <p className="text-muted-foreground">
+                <Link href="/forgot-password" className="font-medium text-accent hover:text-accent/80 underline underline-offset-4">
+                  Forgot Password?
+                </Link>
+             </p>
+              */}
           </div>
         </CardContent>
       </Card>
