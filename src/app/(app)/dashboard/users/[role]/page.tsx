@@ -3,18 +3,18 @@
 import * as React from "react";
 import { useParams, useRouter } from "next/navigation";
 import { getUsers, deleteUser, User, Role } from "@/services/admin";
+import { getProfile } from "@/services/auth"; // Import getProfile
 import { UserTable } from "@/components/user-table";
 import { UserFormDialog } from "@/components/user-form-dialog";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { Terminal, AlertTriangle } from "lucide-react"; // Added AlertTriangle for invalid role
+import { Button } from "@/components/ui/button"; // Import Button
+import { Terminal, AlertTriangle, Loader2, ShieldAlert } from "lucide-react";
 
-// Helper to validate role from URL params
 const isValidRole = (role: string | string[] | undefined): role is Role => {
   if (!role || typeof role !== 'string') return false;
   return ['acheteur', 'vendeur', 'gestionnaire', 'admin'].includes(role);
 };
 
-// Map roles to display names
 const roleDisplayNames: Record<Role, string> = {
     acheteur: "Buyers",
     vendeur: "Sellers",
@@ -27,13 +27,16 @@ export default function UsersPage() {
   const router = useRouter();
   const roleParam = params.role;
 
+  const [currentUserProfile, setCurrentUserProfile] = React.useState<User | null>(null);
+  const [isProfileLoading, setIsProfileLoading] = React.useState(true);
+  const [profileError, setProfileError] = React.useState<string | null>(null);
+
   const [users, setUsers] = React.useState<User[]>([]);
   const [isLoading, setIsLoading] = React.useState(true);
   const [error, setError] = React.useState<string | null>(null);
   const [isFormOpen, setIsFormOpen] = React.useState(false);
   const [userToEdit, setUserToEdit] = React.useState<User | null>(null);
 
-  // Validate role once when params change
   const role = React.useMemo(() => {
       if (isValidRole(roleParam)) {
           return roleParam;
@@ -42,18 +45,44 @@ export default function UsersPage() {
   }, [roleParam]);
 
   React.useEffect(() => {
+    const fetchCurrentUserProfile = async () => {
+      setIsProfileLoading(true);
+      setProfileError(null);
+      try {
+        const profile = await getProfile();
+        setCurrentUserProfile(profile);
+      } catch (err) {
+        console.error("Failed to fetch current user profile:", err);
+        const errorMessage = err instanceof Error ? err.message : "Failed to load your profile.";
+        setProfileError(errorMessage);
+      } finally {
+        setIsProfileLoading(false);
+      }
+    };
+    fetchCurrentUserProfile();
+  }, []);
+
+
+  React.useEffect(() => {
+    if (isProfileLoading || !currentUserProfile) return; // Wait for profile
+
+    if (currentUserProfile.role !== 'admin') {
+        setError("Access Denied: You do not have permission to manage users.");
+        setIsLoading(false);
+        setUsers([]);
+        return;
+    }
+
     if (!role) {
-      // Set a specific error message for invalid role
       setError(`Invalid user role specified: "${roleParam}". Please select a valid role from the dashboard.`);
       setIsLoading(false);
-      setUsers([]); // Clear any potentially stale user data
+      setUsers([]);
       return;
     }
 
-    // Clear previous errors and reset loading state when role changes
     setError(null);
     setIsLoading(true);
-    setUsers([]); // Clear users while loading new role data
+    setUsers([]);
 
     const fetchUsers = async () => {
       try {
@@ -69,7 +98,7 @@ export default function UsersPage() {
     };
 
     fetchUsers();
-  }, [role, roleParam]); // Rerun effect when the validated 'role' changes
+  }, [role, roleParam, currentUserProfile, isProfileLoading]);
 
    const handleAddUser = () => {
     setUserToEdit(null);
@@ -82,18 +111,17 @@ export default function UsersPage() {
   };
 
   const handleDeleteUser = async (userId: string) => {
-     if (!role) return; // Safety check
+     if (!role) return;
 
      const previousUsers = [...users];
      setUsers(currentUsers => currentUsers.filter(user => user.id !== userId));
 
     try {
       await deleteUser(role, userId);
-       // Success handled via toast in UserTable
     } catch (err) {
        console.error("Delete user failed:", err);
-       setUsers(previousUsers); // Revert optimistic update
-       throw err; // Propagate for toast notification
+       setUsers(previousUsers);
+       throw err;
     }
   };
 
@@ -101,12 +129,10 @@ export default function UsersPage() {
      setUsers(currentUsers => {
         const userIndex = currentUsers.findIndex(user => user.id === savedUser.id);
         if (userIndex > -1) {
-            // Update existing user in place
             const updatedUsers = [...currentUsers];
             updatedUsers[userIndex] = savedUser;
             return updatedUsers;
         } else {
-            // Add new user to the end (or beginning)
             return [...currentUsers, savedUser];
         }
      });
@@ -114,39 +140,72 @@ export default function UsersPage() {
      setUserToEdit(null);
    };
 
-  // Render error message clearly if the role is invalid (checked after initial load/validation)
-  if (!isLoading && !role) {
+  if (isProfileLoading) {
+    return (
+      <div className="flex h-[calc(100vh-10rem)] items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+        <span className="ml-3 text-lg text-muted-foreground">Verifying access...</span>
+      </div>
+    );
+  }
+
+  if (profileError) {
+    return (
+      <div className="container mx-auto py-10 px-4 md:px-6 animate-in fade-in duration-300">
+        <Alert variant="destructive" className="max-w-2xl mx-auto">
+          <Terminal className="h-4 w-4" />
+          <AlertTitle>Error Loading Profile</AlertTitle>
+          <AlertDescription>{profileError}</AlertDescription>
+        </Alert>
+      </div>
+    );
+  }
+
+  if (currentUserProfile?.role !== 'admin') {
      return (
         <div className="container mx-auto py-10 px-4 md:px-6 animate-in fade-in duration-300">
              <Alert variant="destructive" className="max-w-2xl mx-auto">
-               <AlertTriangle className="h-4 w-4" /> {/* More appropriate icon */}
+               <ShieldAlert className="h-5 w-5" />
+               <AlertTitle>Access Denied</AlertTitle>
+               <AlertDescription>
+                   You do not have permission to manage users. This section is restricted to administrators.
+                </AlertDescription>
+               <Button onClick={() => router.push('/dashboard')} variant="outline" className="mt-4">
+                 Go to Dashboard
+               </Button>
+             </Alert>
+        </div>
+     );
+  }
+
+  if (!isLoading && !role && currentUserProfile?.role === 'admin') { // Role invalid, but user is admin
+     return (
+        <div className="container mx-auto py-10 px-4 md:px-6 animate-in fade-in duration-300">
+             <Alert variant="destructive" className="max-w-2xl mx-auto">
+               <AlertTriangle className="h-4 w-4" />
                <AlertTitle>Invalid Role Specified</AlertTitle>
                <AlertDescription>
                    {error || `The role "${roleParam}" is not valid.`} Please navigate using the dashboard links.
                 </AlertDescription>
-               {/* <Button onClick={() => router.push('/dashboard')} variant="outline" className="mt-4">Go to Dashboard</Button> */}
              </Alert>
         </div>
      );
    }
 
-   // Role is guaranteed to be valid here if we didn't return the error component
-   const validRole = role as Role; // Type assertion is safe
+   const validRole = role as Role;
 
   return (
-    <div className="container mx-auto py-6 px-4 md:px-6 animate-in fade-in duration-300"> {/* Consistent padding + Animation */}
+    <div className="container mx-auto py-6 px-4 md:px-6 animate-in fade-in duration-300">
       <UserTable
         users={users}
         role={validRole}
         roleDisplayName={roleDisplayNames[validRole]}
         isLoading={isLoading}
-        // Show main error if loading failed AND there are no users currently displayed
         error={error && !isLoading && users.length === 0 ? error : null}
         onAdd={handleAddUser}
         onEdit={handleEditUser}
         onDelete={handleDeleteUser}
       />
-       {/* Conditionally render dialog to ensure clean state on open */}
        {isFormOpen && (
          <UserFormDialog
             isOpen={isFormOpen}

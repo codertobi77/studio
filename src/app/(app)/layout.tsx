@@ -11,7 +11,8 @@ import {
   ShoppingCart,
   ShieldCheck,
   Loader2,
-  Menu, // Added Menu icon for mobile trigger
+  Menu,
+  Briefcase, // Added for Markets link
 } from "lucide-react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
@@ -34,6 +35,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { logout, getProfile } from "@/services/auth";
+import type { User } from "@/services/admin"; // Assuming User type for profile
 import { useToast } from "@/hooks/use-toast";
 import {
   DropdownMenu,
@@ -44,10 +46,9 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Skeleton } from "@/components/ui/skeleton";
-import { useIsMobile } from "@/hooks/use-mobile"; // Import useIsMobile
-import { ThemeToggle } from "@/components/theme-toggle"; // Import ThemeToggle
+import { useIsMobile } from "@/hooks/use-mobile";
+import { ThemeToggle } from "@/components/theme-toggle";
 
-// Function to get cookie value by name
 const getCookie = (name: string): string | undefined => {
   if (typeof document === 'undefined') return undefined;
   const value = `; ${document.cookie}`;
@@ -60,9 +61,9 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const pathname = usePathname();
   const { toast } = useToast();
-  const [userProfile, setUserProfile] = React.useState<any>(null);
+  const [userProfile, setUserProfile] = React.useState<User | null>(null); // Use User type
   const [isLoading, setIsLoading] = React.useState(true);
-  const isMobile = useIsMobile(); // Check if mobile
+  const isMobile = useIsMobile();
 
   React.useEffect(() => {
     const fetchProfile = async () => {
@@ -73,7 +74,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
         return;
       }
 
-      setIsLoading(true); // Set loading true before fetch
+      setIsLoading(true);
       try {
         const profile = await getProfile();
         setUserProfile(profile);
@@ -84,7 +85,6 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
           description: "Could not retrieve profile. Please log in again.",
           variant: "destructive",
         });
-        // Perform logout actions on profile fetch failure
         document.cookie = 'authToken=; path=/; max-age=0';
         localStorage.removeItem("authToken");
         router.push("/login");
@@ -94,7 +94,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     };
 
     fetchProfile();
-  }, [router, toast]); // Dependency array includes router and toast
+  }, [router, toast]);
 
   const handleLogout = async () => {
     try {
@@ -114,13 +114,12 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
 
   const getUserInitials = (username: string | undefined): string => {
     if (!username) return "??";
-    const names = username.trim().split(" ").filter(Boolean); // Filter out empty strings
+    const names = username.trim().split(" ").filter(Boolean);
     if (names.length === 0) return "??";
     if (names.length === 1) return names[0].substring(0, 2).toUpperCase();
     return (names[0][0] + names[names.length - 1][0]).toUpperCase();
   };
 
-  // Centralized Loading Screen
    if (isLoading) {
      return (
        <div className="flex h-screen w-full items-center justify-center bg-background">
@@ -130,26 +129,26 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
      );
    }
 
-  // If loading is done but profile is still null (due to error and redirect)
   if (!userProfile) {
-      // Render minimal layout or null while redirection occurs
-      return null; // Or a minimal loading/error state if preferred
+      return null;
   }
 
+  const isAdmin = userProfile?.role === 'admin';
+  const isGestionnaire = userProfile?.role === 'gestionnaire';
+
   return (
-    // Use defaultOpen based on screen size? Maybe always true for desktop.
     <SidebarProvider defaultOpen={!isMobile}>
       <Sidebar side="left" collapsible={isMobile ? "offcanvas" : "icon"}>
-        <SidebarHeader className="border-b border-sidebar-border p-2"> {/* Consistent padding */}
-           <Link href="/dashboard" className="flex items-center gap-2 focus:outline-none focus:ring-2 focus:ring-ring rounded-md p-1 -m-1"> {/* Added focus ring */}
+        <SidebarHeader className="border-b border-sidebar-border p-2">
+           <Link href="/dashboard" className="flex items-center gap-2 focus:outline-none focus:ring-2 focus:ring-ring rounded-md p-1 -m-1">
                 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-6 w-6 text-primary"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg>
-                {/* Only show title when expanded */}
-                <h2 className="text-xl font-semibold text-primary group-data-[state=collapsed]:hidden">Admin Hub</h2>
+                <h2 className="text-xl font-semibold text-primary group-data-[state=collapsed]:hidden">
+                  {isGestionnaire ? "Manager Hub" : "Admin Hub"}
+                </h2>
             </Link>
         </SidebarHeader>
-        <SidebarContent className="flex-1 p-2"> {/* Ensure content fills space */}
+        <SidebarContent className="flex-1 p-2">
            <SidebarMenu>
-            {/* Dashboard Link */}
             <SidebarMenuItem>
               <SidebarMenuButton asChild isActive={pathname === '/dashboard'} tooltip="Dashboard">
                 <Link href="/dashboard">
@@ -159,59 +158,70 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
               </SidebarMenuButton>
             </SidebarMenuItem>
 
-            {/* User Management Group */}
-            <SidebarGroup>
-              <SidebarGroupLabel>User Management</SidebarGroupLabel>
-              <SidebarMenuItem>
-                <SidebarMenuButton asChild isActive={pathname.startsWith('/dashboard/users/acheteurs')} tooltip="Buyers">
-                   <Link href="/dashboard/users/acheteurs">
-                    <ShoppingCart />
-                    <span className="group-data-[state=collapsed]:hidden">Acheteurs</span>
-                  </Link>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
-              <SidebarMenuItem>
-                <SidebarMenuButton asChild isActive={pathname.startsWith('/dashboard/users/vendeurs')} tooltip="Sellers">
-                  <Link href="/dashboard/users/vendeurs">
-                    <Building />
-                    <span className="group-data-[state=collapsed]:hidden">Vendeurs</span>
-                  </Link>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
-              <SidebarMenuItem>
-                <SidebarMenuButton asChild isActive={pathname.startsWith('/dashboard/users/gestionnaires')} tooltip="Managers">
-                  <Link href="/dashboard/users/gestionnaires">
-                    <UserCog />
-                    <span className="group-data-[state=collapsed]:hidden">Gestionnaires</span>
-                  </Link>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
-               <SidebarMenuItem>
-                <SidebarMenuButton asChild isActive={pathname.startsWith('/dashboard/users/admins')} tooltip="Admins">
-                  <Link href="/dashboard/users/admins">
-                    <ShieldCheck />
-                    <span className="group-data-[state=collapsed]:hidden">Admins</span>
-                  </Link>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
-            </SidebarGroup>
-            {/* Add other groups/items here */}
+            {isAdmin && (
+              <SidebarGroup>
+                <SidebarGroupLabel>User Management</SidebarGroupLabel>
+                <SidebarMenuItem>
+                  <SidebarMenuButton asChild isActive={pathname.startsWith('/dashboard/users/acheteurs')} tooltip="Buyers">
+                     <Link href="/dashboard/users/acheteurs">
+                      <ShoppingCart />
+                      <span className="group-data-[state=collapsed]:hidden">Acheteurs</span>
+                    </Link>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+                <SidebarMenuItem>
+                  <SidebarMenuButton asChild isActive={pathname.startsWith('/dashboard/users/vendeurs')} tooltip="Sellers">
+                    <Link href="/dashboard/users/vendeurs">
+                      <Building />
+                      <span className="group-data-[state=collapsed]:hidden">Vendeurs</span>
+                    </Link>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+                <SidebarMenuItem>
+                  <SidebarMenuButton asChild isActive={pathname.startsWith('/dashboard/users/gestionnaires')} tooltip="Managers">
+                    <Link href="/dashboard/users/gestionnaires">
+                      <UserCog />
+                      <span className="group-data-[state=collapsed]:hidden">Gestionnaires</span>
+                    </Link>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+                 <SidebarMenuItem>
+                  <SidebarMenuButton asChild isActive={pathname.startsWith('/dashboard/users/admins')} tooltip="Admins">
+                    <Link href="/dashboard/users/admins">
+                      <ShieldCheck />
+                      <span className="group-data-[state=collapsed]:hidden">Admins</span>
+                    </Link>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              </SidebarGroup>
+            )}
+
+            {isGestionnaire && (
+              <SidebarGroup>
+                <SidebarGroupLabel>Market Management</SidebarGroupLabel>
+                <SidebarMenuItem>
+                  <SidebarMenuButton asChild isActive={pathname.startsWith('/dashboard/markets')} tooltip="Markets">
+                    <Link href="/dashboard/markets">
+                      <Briefcase />
+                      <span className="group-data-[state=collapsed]:hidden">Marchés</span>
+                    </Link>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+                {/* Add other market-related links here */}
+              </SidebarGroup>
+            )}
           </SidebarMenu>
         </SidebarContent>
-        {/* Footer with User Profile Dropdown */}
         <SidebarSeparator />
         <SidebarFooter className="p-2">
            <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              {/* Button visual style, but using div for layout flexibility */}
               <div className="flex items-center w-full p-2 rounded-md cursor-pointer hover:bg-muted group-data-[state=collapsed]:justify-center group-data-[state=collapsed]:size-10 group-data-[state=collapsed]:p-0 transition-colors focus:outline-none focus:ring-2 focus:ring-ring">
                 <Avatar className="h-8 w-8 group-data-[state=collapsed]:h-7 group-data-[state=collapsed]:w-7">
-                  {/* <AvatarImage src={userProfile?.avatarUrl} alt={userProfile?.username} /> */}
                   <AvatarFallback className="text-xs group-data-[state=collapsed]:text-[10px]">
                     {getUserInitials(userProfile?.username)}
                   </AvatarFallback>
                 </Avatar>
-                {/* User Info - Hidden when collapsed */}
                 <div className="ml-2 flex flex-col items-start overflow-hidden group-data-[state=collapsed]:hidden">
                   <span className="text-sm font-medium truncate max-w-[120px]">{userProfile?.username || "User"}</span>
                   <span className="text-xs text-muted-foreground truncate max-w-[120px]">{userProfile?.email || "No email"}</span>
@@ -232,7 +242,6 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
                 <Settings className="mr-2 h-4 w-4" />
                 <span>Profile</span>
               </DropdownMenuItem>
-              {/* Add other items like Settings if needed */}
               <DropdownMenuSeparator />
               <DropdownMenuItem onClick={handleLogout} className="text-destructive focus:text-destructive focus:bg-destructive/10">
                 <LogOut className="mr-2 h-4 w-4" />
@@ -243,37 +252,22 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
         </SidebarFooter>
       </Sidebar>
 
-      {/* Main Content Area */}
       <SidebarInset className="flex flex-col bg-background">
-        {/* Header for main content area (e.g., breadcrumbs, mobile trigger) */}
          <header className="sticky top-0 z-30 flex h-14 items-center gap-4 border-b bg-background px-4 sm:px-6">
-           {/* Mobile Sidebar Trigger - shown only on mobile */}
            <SidebarTrigger className="sm:hidden">
-                <Menu className="h-5 w-5"/> {/* Use Menu icon for mobile */}
+                <Menu className="h-5 w-5"/>
            </SidebarTrigger>
-
-           {/* Breadcrumbs or Page Title Placeholder */}
            <div className="flex-1">
-             {/* Example: <h1 className="text-lg font-semibold">Page Title</h1> */}
            </div>
-
-           {/* Optional: Desktop Sidebar Trigger - shown only > sm */}
-           {/* <SidebarTrigger className="hidden sm:flex"/> */}
-
-           {/* Header actions: Theme Toggle */}
             <div className="flex items-center gap-2">
                <ThemeToggle />
             </div>
         </header>
-
-        {/* Page Content */}
         <main className="flex-1 overflow-y-auto p-4 md:p-6">
-             <div className="animate-in fade-in duration-500"> {/* Simple fade-in animation */}
+             <div className="animate-in fade-in duration-500">
                 {children}
             </div>
         </main>
-         {/* Optional Footer for main content area */}
-         {/* <footer className="border-t p-4 text-center text-sm text-muted-foreground">Footer</footer> */}
       </SidebarInset>
     </SidebarProvider>
   );

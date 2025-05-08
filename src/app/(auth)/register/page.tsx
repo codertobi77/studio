@@ -31,7 +31,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Role } from "@/services/admin";
 import { Loader2, UserPlus } from "lucide-react"; // Used UserPlus icon
 
-const roles: Role[] = ['acheteur', 'vendeur', 'gestionnaire', 'admin'];
+const roles: Role[] = ['gestionnaire', 'admin'];
 
 const registerSchema = z.object({
   username: z.string().min(3, { message: "Username must be at least 3 characters." }).trim(),
