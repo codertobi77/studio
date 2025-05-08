@@ -1,12 +1,27 @@
+
+export interface UserRegistrationData {
+  firstName: string;
+  lastName: string;
+  email: string;
+  password?: string; // Optional for profile updates, required for registration
+  role: string;
+}
+
+export interface UserLoginData {
+  email: string;
+  password?: string;
+}
+
 export interface AuthResult {
   success: boolean;
   message: string;
-  token?: string; // Token returned on successful login/register
-  profile?: any; // User profile data returned on successful login/profile fetch
+  token?: string;
+  profile?: any; // Consider defining a UserProfile type
 }
 
 // Updated API base URL as per user request
 const API_BASE_URL = "/api/auth"; // Base URL for authentication API endpoints
+
 
 // Helper to simulate API delay
 const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
@@ -43,11 +58,11 @@ async function handleAuthApiResponse<T>(response: Response): Promise<T> {
 /**
  * Asynchronously registers a new user by calling the API.
  * Endpoint: POST /api/auth/register
- * @param userData The user data including username, email, password, role.
+ * @param userData The user data including firstName, lastName, email, password, role.
  * @returns A promise that resolves to the AuthResult.
  */
-export async function register(userData: any): Promise<AuthResult> {
-  console.log("Attempting registration with data:", userData);
+export async function register(userData: UserRegistrationData): Promise<AuthResult> {
+  console.log("Attempting registration with data:", { email: userData.email, firstName: userData.firstName, lastName: userData.lastName, role: userData.role });
   await delay(500); // Simulate network delay
 
   try {
@@ -79,7 +94,7 @@ export async function register(userData: any): Promise<AuthResult> {
  * @param credentials The user credentials (email, password).
  * @returns A promise that resolves to the AuthResult containing a token on success.
  */
-export async function login(credentials: any): Promise<AuthResult> {
+export async function login(credentials: UserLoginData): Promise<AuthResult> {
   console.log("Attempting login with credentials:", credentials.email);
   await delay(500); // Simulate network delay
 
@@ -158,7 +173,7 @@ export async function logout(): Promise<AuthResult> {
  * @returns A promise that resolves to the user profile data.
  * @throws Will throw an error if the API call fails or token is missing/invalid.
  */
-export async function getProfile(): Promise<any> {
+export async function getProfile(): Promise<any> { // Consider defining UserProfile type
     console.log("Attempting to fetch profile.");
     await delay(300); // Simulate network delay
     const token = getToken();
@@ -219,7 +234,7 @@ export async function verifyEmail(token: string): Promise<AuthResult> {
         const result = await handleAuthApiResponse<AuthResult>(response);
 
         return {
-            success: true, // If handleApiResponse didn't throw
+            success: true, // If handleAuthApiResponse didn't throw
             message: result.message || 'Email verification successful.',
         };
     } catch (error) {
@@ -228,3 +243,4 @@ export async function verifyEmail(token: string): Promise<AuthResult> {
           return { success: false, message };
     }
 }
+

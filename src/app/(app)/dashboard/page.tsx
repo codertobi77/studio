@@ -1,3 +1,4 @@
+
 "use client";
 
 import * as React from "react";
@@ -78,9 +79,11 @@ export default function DashboardPage() {
 
   const isAdmin = userProfile.role === 'admin';
   const isGestionnaire = userProfile.role === 'gestionnaire';
+  
+  const userDisplayName = `${userProfile.firstName || ''} ${userProfile.lastName || ''}`.trim() || 'User';
 
   let pageTitle = "Dashboard";
-  let pageSubtitle = `Welcome, ${userProfile.username || 'User'}.`;
+  let pageSubtitle = `Welcome, ${userDisplayName}.`;
 
   if (isAdmin) {
     pageSubtitle = "Manage platform users and their roles from here.";

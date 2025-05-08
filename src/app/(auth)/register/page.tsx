@@ -1,3 +1,4 @@
+
 "use client";
 
 import * as React from "react";
@@ -28,13 +29,14 @@ import { useToast } from "@/hooks/use-toast";
 import { register } from "@/services/auth";
 import Link from "next/link";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Role } from "@/services/admin";
+import type { Role } from "@/services/admin";
 import { Loader2, UserPlus } from "lucide-react"; // Used UserPlus icon
 
-const roles: Role[] = ['gestionnaire', 'admin'];
+const roles: Role[] = ['gestionnaire', 'admin']; // Only these roles can self-register
 
 const registerSchema = z.object({
-  username: z.string().min(3, { message: "Username must be at least 3 characters." }).trim(),
+  firstName: z.string().min(2, { message: "First name must be at least 2 characters." }).trim(),
+  lastName: z.string().min(2, { message: "Last name must be at least 2 characters." }).trim(),
   email: z.string().email({ message: "Invalid email address." }).trim(),
   password: z.string().min(6, { message: "Password must be at least 6 characters." }),
   role: z.enum(roles, { required_error: "Please select a role." }),
@@ -50,7 +52,8 @@ export default function RegisterPage() {
   const form = useForm<RegisterFormValues>({
     resolver: zodResolver(registerSchema),
     defaultValues: {
-      username: "",
+      firstName: "",
+      lastName: "",
       email: "",
       password: "",
       role: undefined,
@@ -60,6 +63,8 @@ export default function RegisterPage() {
   async function onSubmit(data: RegisterFormValues) {
     setIsLoading(true);
     try {
+      // The register service function will internally combine firstName and lastName for username if needed,
+      // or handle them as separate fields.
       const result = await register(data);
       if (result.success) {
         toast({
@@ -104,24 +109,44 @@ export default function RegisterPage() {
         <CardContent className="p-6">
           <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-              <FormField
-                control={form.control}
-                name="username"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Username</FormLabel>
-                    <FormControl>
-                      <Input
-                        placeholder="johndoe"
-                        {...field}
-                        disabled={isLoading}
-                        className="bg-input focus:ring-primary focus:border-primary" // Enhanced focus state
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-6"> {/* Grid for names */}
+                <FormField
+                  control={form.control}
+                  name="firstName"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>First Name</FormLabel>
+                      <FormControl>
+                        <Input
+                          placeholder="John"
+                          {...field}
+                          disabled={isLoading}
+                          className="bg-input focus:ring-primary focus:border-primary"
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="lastName"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Last Name</FormLabel>
+                      <FormControl>
+                        <Input
+                          placeholder="Doe"
+                          {...field}
+                          disabled={isLoading}
+                          className="bg-input focus:ring-primary focus:border-primary"
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
               <FormField
                 control={form.control}
                 name="email"
@@ -134,7 +159,7 @@ export default function RegisterPage() {
                         placeholder="john.doe@example.com"
                         {...field}
                         disabled={isLoading}
-                        className="bg-input focus:ring-primary focus:border-primary" // Enhanced focus state
+                        className="bg-input focus:ring-primary focus:border-primary"
                       />
                     </FormControl>
                     <FormMessage />
@@ -153,7 +178,7 @@ export default function RegisterPage() {
                         placeholder="••••••••"
                         {...field}
                         disabled={isLoading}
-                        className="bg-input focus:ring-primary focus:border-primary" // Enhanced focus state
+                        className="bg-input focus:ring-primary focus:border-primary"
                       />
                     </FormControl>
                      <FormDescription>
@@ -171,7 +196,7 @@ export default function RegisterPage() {
                       <FormLabel>Role</FormLabel>
                       <Select onValueChange={field.onChange} defaultValue={field.value} disabled={isLoading}>
                         <FormControl>
-                          <SelectTrigger className="bg-input focus:ring-primary focus:border-primary"> {/* Enhanced focus state */}
+                          <SelectTrigger className="bg-input focus:ring-primary focus:border-primary">
                             <SelectValue placeholder="Select your role" />
                           </SelectTrigger>
                         </FormControl>
@@ -188,12 +213,12 @@ export default function RegisterPage() {
                     </FormItem>
                   )}
                 />
-              <Button type="submit" className="w-full bg-primary hover:bg-primary/90 text-primary-foreground py-3 text-base" disabled={isLoading}> {/* Larger button */}
+              <Button type="submit" className="w-full bg-primary hover:bg-primary/90 text-primary-foreground py-3 text-base" disabled={isLoading}>
                 {isLoading ? <><Loader2 className="mr-2 h-5 w-5 animate-spin" /> Creating Account...</> : "Create Account"}
               </Button>
             </form>
           </Form>
-          <div className="mt-8 text-center text-sm"> {/* Increased margin */}
+          <div className="mt-8 text-center text-sm">
              <p className="text-muted-foreground">
                 Already have an account?{" "}
                 <Link href="/login" className="font-medium text-accent hover:text-accent/80 underline underline-offset-4 focus:outline-none focus:ring-1 focus:ring-accent rounded px-0.5">
@@ -206,3 +231,4 @@ export default function RegisterPage() {
     </div>
   );
 }
+

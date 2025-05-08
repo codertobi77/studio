@@ -1,3 +1,4 @@
+
 "use client";
 
 import * as React from "react";
@@ -112,13 +113,15 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     }
   };
 
-  const getUserInitials = (username: string | undefined): string => {
-    if (!username) return "??";
-    const names = username.trim().split(" ").filter(Boolean);
-    if (names.length === 0) return "??";
-    if (names.length === 1) return names[0].substring(0, 2).toUpperCase();
-    return (names[0][0] + names[names.length - 1][0]).toUpperCase();
+  const getUserInitials = (firstName?: string, lastName?: string): string => {
+    if (!firstName && !lastName) return "??";
+    if (firstName && !lastName) return firstName.substring(0, 2).toUpperCase();
+    if (!firstName && lastName) return lastName.substring(0, 2).toUpperCase();
+    return (firstName![0] + lastName![0]).toUpperCase();
   };
+  
+  const userFullName = userProfile ? `${userProfile.firstName || ''} ${userProfile.lastName || ''}`.trim() : "User";
+
 
    if (isLoading) {
      return (
@@ -219,11 +222,11 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
               <div className="flex items-center w-full p-2 rounded-md cursor-pointer hover:bg-muted group-data-[state=collapsed]:justify-center group-data-[state=collapsed]:size-10 group-data-[state=collapsed]:p-0 transition-colors focus:outline-none focus:ring-2 focus:ring-ring">
                 <Avatar className="h-8 w-8 group-data-[state=collapsed]:h-7 group-data-[state=collapsed]:w-7">
                   <AvatarFallback className="text-xs group-data-[state=collapsed]:text-[10px]">
-                    {getUserInitials(userProfile?.username)}
+                    {getUserInitials(userProfile?.firstName, userProfile?.lastName)}
                   </AvatarFallback>
                 </Avatar>
                 <div className="ml-2 flex flex-col items-start overflow-hidden group-data-[state=collapsed]:hidden">
-                  <span className="text-sm font-medium truncate max-w-[120px]">{userProfile?.username || "User"}</span>
+                  <span className="text-sm font-medium truncate max-w-[120px]">{userFullName}</span>
                   <span className="text-xs text-muted-foreground truncate max-w-[120px]">{userProfile?.email || "No email"}</span>
                 </div>
               </div>
@@ -231,7 +234,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
             <DropdownMenuContent className="w-56 mb-2" side="top" align="start">
               <DropdownMenuLabel className="font-normal">
                 <div className="flex flex-col space-y-1">
-                  <p className="text-sm font-medium leading-none truncate">{userProfile?.username}</p>
+                  <p className="text-sm font-medium leading-none truncate">{userFullName}</p>
                   <p className="text-xs leading-none text-muted-foreground truncate">
                     {userProfile?.email}
                   </p>

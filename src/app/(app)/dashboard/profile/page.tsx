@@ -1,3 +1,4 @@
+
 "use client";
 
 import * as React from "react";
@@ -5,10 +6,11 @@ import { getProfile } from "@/services/auth";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { User, Mail, ShieldCheck, CalendarDays, Terminal } from "lucide-react"; // Used ShieldCheck for role
+import { User, Mail, ShieldCheck, CalendarDays, Terminal, PersonStanding } from "lucide-react"; // Used ShieldCheck for role, PersonStanding for Name
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator"; // Import Separator
+import type { User as UserProfileType } from "@/services/admin"; // Using the admin User type
 
 // Function to get cookie value by name
 const getCookie = (name: string): string | undefined => {
@@ -20,7 +22,7 @@ const getCookie = (name: string): string | undefined => {
 }
 
 export default function ProfilePage() {
-  const [profile, setProfile] = React.useState<any>(null);
+  const [profile, setProfile] = React.useState<UserProfileType | null>(null);
   const [isLoading, setIsLoading] = React.useState(true);
   const [error, setError] = React.useState<string | null>(null);
 
@@ -100,13 +102,11 @@ export default function ProfilePage() {
           {!isLoading && !error && profile && (
             // Remove internal padding, rely on renderProfileField's padding
             <>
-              {renderProfileField(User, "Username", profile.username)}
+              {renderProfileField(PersonStanding, "Full Name", `${profile.firstName || ''} ${profile.lastName || ''}`.trim() || <span className="italic">Not provided</span>)}
               {renderProfileField(Mail, "Email", profile.email)}
-              {/* Assuming role and createdAt are available in profile object */}
               {renderProfileField(ShieldCheck, "Role", <Badge variant="secondary" className="capitalize">{profile.role || 'Unknown'}</Badge>)}
               {profile.createdAt && renderProfileField(CalendarDays, "Joined Date", new Date(profile.createdAt).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }))}
               {/* Add more profile fields here as needed */}
-              {/* Example: renderProfileField(Phone, "Phone Number", profile.phoneNumber) */}
             </>
           )}
            {!isLoading && !error && !profile && (
@@ -124,3 +124,4 @@ export default function ProfilePage() {
     </div>
   );
 }
+

@@ -1,3 +1,4 @@
+
 "use client";
 
 import * as React from "react";
@@ -25,13 +26,15 @@ import {
   FormMessage,
   FormDescription,
 } from "@/components/ui/form";
-import { User, Role, createUser, updateUser } from "@/services/admin";
+import type { User, Role, CreateUserData, UpdateUserData } from "@/services/admin";
+import { createUser, updateUser } from "@/services/admin";
 import { useToast } from "@/hooks/use-toast";
 import { Loader2, UserCircle, UserPlus } from "lucide-react"; // Added icons
 
-// Schema definition remains the same
+// Schema definition
 const userFormSchemaBase = z.object({
-  username: z.string().min(3, { message: "Username must be at least 3 characters." }).trim(),
+  firstName: z.string().min(2, { message: "First name must be at least 2 characters." }).trim(),
+  lastName: z.string().min(2, { message: "Last name must be at least 2 characters." }).trim(),
   email: z.string().email({ message: "Invalid email address." }).trim(),
 });
 
@@ -75,8 +78,13 @@ export function UserFormDialog({
     if (isOpen) {
       form.reset(
         isEditing
-          ? { username: userToEdit?.username || "", email: userToEdit?.email || "", password: "" }
-          : { username: "", email: "", password: "" }
+          ? { 
+              firstName: userToEdit?.firstName || "", 
+              lastName: userToEdit?.lastName || "", 
+              email: userToEdit?.email || "", 
+              password: "" 
+            }
+          : { firstName: "", lastName: "", email: "", password: "" }
       );
       form.clearErrors();
     }
@@ -87,37 +95,35 @@ export function UserFormDialog({
     setIsLoading(true);
     try {
       let savedUser: User;
-      const userData: Partial<Omit<User, 'id' | 'role'>> & { password?: string } = {
-         username: data.username,
+      const baseUserData: Omit<CreateUserData | UpdateUserData, 'role' | 'password'> = {
+         firstName: data.firstName,
+         lastName: data.lastName,
          email: data.email,
       };
 
-      if (data.password && data.password.trim() !== '') {
-         userData.password = data.password;
-      } else if (!isEditing && (!data.password || data.password.trim() === '')) {
-          // Re-validate password requirement for adding user (should be caught by zod, but good fallback)
-          form.setError("password", { type: "manual", message: "Password is required when adding a new user." });
-          setIsLoading(false);
-          return;
-      }
+      let finalUserData: CreateUserData | UpdateUserData;
 
       if (isEditing && userToEdit) {
-        savedUser = await updateUser(role, userToEdit.id, { ...userData, role });
+        const updatePayload: UpdateUserData = { ...baseUserData, role };
+        if (data.password && data.password.trim() !== '') {
+          updatePayload.password = data.password;
+        }
+        savedUser = await updateUser(role, userToEdit.id, updatePayload);
         toast({
           title: "User Updated Successfully",
-          description: `Details for ${savedUser.username} (${role}) have been saved.`,
+          description: `Details for ${savedUser.firstName} ${savedUser.lastName} (${role}) have been saved.`,
         });
       } else {
-        // Create user requires password ensured by schema/check above
-        savedUser = await createUser(role, {
-            username: userData.username!,
-            email: userData.email!,
-            password: userData.password!,
-            role: role
-        });
+        if (!data.password || data.password.trim() === '') {
+            form.setError("password", { type: "manual", message: "Password is required when adding a new user." });
+            setIsLoading(false);
+            return;
+        }
+        finalUserData = { ...baseUserData, password: data.password, role: role } as CreateUserData;
+        savedUser = await createUser(role, finalUserData);
         toast({
           title: "User Created Successfully",
-          description: `${savedUser.username} (${role}) has been added. Email verification may be required.`,
+          description: `${savedUser.firstName} ${savedUser.lastName} (${role}) has been added. Email verification may be required.`,
         });
       }
       onUserSaved(savedUser);
@@ -140,35 +146,50 @@ export function UserFormDialog({
   const roleDisplayName = role.charAt(0).toUpperCase() + role.slice(1);
   const title = isEditing ? `Edit ${roleDisplayName}` : `Add New ${roleDisplayName}`;
   const description = isEditing
-    ? `Modify the details for ${userToEdit?.username || 'this user'}.`
+    ? `Modify the details for ${userToEdit?.firstName || ''} ${userToEdit?.lastName || 'this user'}.`
     : `Enter the details for the new ${roleDisplayName.toLowerCase()}.`;
   const Icon = isEditing ? UserCircle : UserPlus;
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="sm:max-w-lg"> {/* Adjusted max-width */}
-        <DialogHeader className="mb-4"> {/* Added margin bottom */}
+      <DialogContent className="sm:max-w-lg">
+        <DialogHeader className="mb-4">
           <div className="flex items-center gap-3 mb-2">
               <Icon className="h-6 w-6 text-primary" />
-              <DialogTitle className="text-xl">{title}</DialogTitle> {/* Slightly larger title */}
+              <DialogTitle className="text-xl">{title}</DialogTitle>
           </div>
           <DialogDescription>{description}</DialogDescription>
         </DialogHeader>
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6"> {/* Increased spacing */}
-            <FormField
-              control={form.control}
-              name="username"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Username</FormLabel>
-                  <FormControl>
-                    <Input placeholder="e.g., john.doe" {...field} disabled={isLoading} className="bg-input focus:ring-primary focus:border-primary"/>
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-6">
+                <FormField
+                  control={form.control}
+                  name="firstName"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>First Name</FormLabel>
+                      <FormControl>
+                        <Input placeholder="e.g., John" {...field} disabled={isLoading} className="bg-input focus:ring-primary focus:border-primary"/>
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="lastName"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Last Name</FormLabel>
+                      <FormControl>
+                        <Input placeholder="e.g., Doe" {...field} disabled={isLoading} className="bg-input focus:ring-primary focus:border-primary"/>
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+            </div>
             <FormField
               control={form.control}
               name="email"
@@ -204,8 +225,7 @@ export function UserFormDialog({
                 </FormItem>
               )}
             />
-             <DialogFooter className="pt-6 gap-2 sm:gap-0"> {/* Added gap for mobile */}
-                {/* Use DialogClose for the cancel button for better accessibility */}
+             <DialogFooter className="pt-6 gap-2 sm:gap-0">
                 <DialogClose asChild>
                     <Button type="button" variant="outline" disabled={isLoading}>Cancel</Button>
                 </DialogClose>
@@ -223,3 +243,4 @@ export function UserFormDialog({
     </Dialog>
   );
 }
+

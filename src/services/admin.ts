@@ -1,3 +1,4 @@
+
 /**
  * Represents a user role.
  */
@@ -8,7 +9,8 @@ export type Role = 'acheteur' | 'vendeur' | 'gestionnaire' | 'admin';
  */
 export interface User {
   id: string;
-  username: string;
+  firstName: string;
+  lastName: string;
   email: string;
   role: Role;
   // Add other potential fields like createdAt, updatedAt, status, etc.
@@ -147,7 +149,7 @@ export async function getUser(role: Role, id: string): Promise<User | null> {
  * @throws Will throw an error if the API call fails.
  */
 export async function createUser(role: Role, userData: CreateUserData): Promise<User> {
-   console.log(`Creating new ${role} user:`, userData.username);
+   console.log(`Creating new ${role} user:`, userData.email); // Log email or another identifier
    await delay(500);
 
     if (!userData.password) {
@@ -179,7 +181,7 @@ export async function createUser(role: Role, userData: CreateUserData): Promise<
  * @throws Will throw an error if the API call fails.
  */
 export async function updateUser(role: Role, id: string, userData: UpdateUserData): Promise<User> {
-   console.log(`Updating user ${id} (${role}) with data:`, userData);
+   console.log(`Updating user ${id} (${role}) with data:`, { email: userData.email, firstName: userData.firstName, lastName: userData.lastName });
    await delay(400);
 
     // Remove password field if it's empty or just whitespace
@@ -236,3 +238,4 @@ export async function deleteUser(role: Role, id: string): Promise<void> {
        throw error;
    }
 }
+
